@@ -174,7 +174,7 @@ export function Recorder({
           addSegment(uri);
         }
       }
-      await setAudioModeAsync({ allowsRecording: false });
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: false, interruptionMode: 'mixWithOthers' });
       finish();
     }
   };

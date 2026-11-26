@@ -5,6 +5,7 @@ import {
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { useApp } from '../AppState';
 import { useSetting } from '../db';
+import { playCover } from '../sounds';
 import {
   bioAuth, bioAvailable, bioEnabled, bioLabel, checkPassword, clearPassword, deviceAuth, hasPassword, pickCoverPhoto,
 } from '../security';
@@ -50,6 +51,7 @@ export function Cover() {
   const open = useCallback(() => {
     if (opening.current) return;
     opening.current = true;
+    playCover();
     setPw('');
     setError('');
     Animated.timing(a, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => {

@@ -12,6 +12,7 @@ import { exactAlarmStatus, requestExactAlarm, rescheduleAll, setupNotifications,
 import {
   bioAuth, bioAvailable, bioLabel, checkPassword, clearPassword, pickCoverPhoto, removeCoverPhoto, setPassword,
 } from '../security';
+import { playPageTurn, VOLUMES } from '../sounds';
 import { C } from '../theme';
 
 function Row({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
@@ -34,6 +35,8 @@ export function SettingsScreen() {
   const [showCover, setShowCover] = useSetting('showCover', '1');
   const [exact, setExact] = useSetting('exactAlarms', '1');
   const [photo] = useSetting('coverPhoto', '');
+  const [pageSound, setPageSound] = useSetting('pageSound', '1');
+  const [pageVolume, setPageVolume] = useSetting('pageVolume', '0.65');
   const [bio, setBio] = useSetting('lockBio', '0');
   const [lockAfter, setLockAfter] = useSetting('lockAfter', '1');
   const [pwHash] = useSetting('lockHash', '');
@@ -173,6 +176,20 @@ export function SettingsScreen() {
               </View>
             </Row>
           )}
+
+          <Text style={s.group}>Sonidos de la agenda</Text>
+          <Row title="Ruido de papel" desc="Al pasar las hojas y al abrir la tapa. Respeta el modo silencio y no corta tu música.">
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Switch value={pageSound === '1'} onValueChange={(v) => setPageSound(v ? '1' : '0')} trackColor={{ true: C.accent }} />
+              {pageSound === '1' && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {VOLUMES.map(([v, l]) => (
+                    <Chip key={v} label={l} active={pageVolume === v} onPress={() => { setPageVolume(v); setTimeout(playPageTurn, 50); }} />
+                  ))}
+                </View>
+              )}
+            </View>
+          </Row>
 
           <Text style={s.group}>Escritura a mano</Text>
           <Row

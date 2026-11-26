@@ -2,6 +2,7 @@ import { Canvas, Image as SkiaImage, makeImageFromView, SkImage } from '@shopify
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { playPageTurn } from '../sounds';
 import { C } from '../theme';
 
 export type FlipDir = 'next' | 'prev';
@@ -103,6 +104,7 @@ export function usePageFlip(axisMode: 'center' | 'left' = 'center') {
       if (busy.current) return;
       busy.current = true;
       a.setValue(0);
+      playPageTurn();
       if (!(await prepare(dir, change))) {
         busy.current = false;
         return;
@@ -144,6 +146,7 @@ export function usePageFlip(axisMode: 'center' | 'left' = 'center') {
       busy.current = true;
       a.setValue(0);
       drag.current = { ready: false, pos: 0, ended: null, revert };
+      playPageTurn();
       const ok = await prepare(dir, change);
       const d = drag.current;
       if (!ok || !d) {

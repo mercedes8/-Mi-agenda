@@ -12,6 +12,7 @@ import { parseYmd } from './src/dates';
 import * as Notifications from 'expo-notifications';
 import { AgendaAlarm } from './modules/agenda-alarm';
 import { isLockEnabled, lockAfterMinutes } from './src/security';
+import { initSounds } from './src/sounds';
 import { BIRTHDAY_BASE, dailyRefresh, listenResponses, Reminder, setupNotifications } from './src/notifications';
 import { ContactsScreen } from './src/screens/ContactsScreen';
 import { DayScreen } from './src/screens/DayScreen';
@@ -83,6 +84,7 @@ function Shell() {
       }
     };
 
+    initSounds();
     setupNotifications()
       .then(() => dailyRefresh())
       .catch(console.warn);
