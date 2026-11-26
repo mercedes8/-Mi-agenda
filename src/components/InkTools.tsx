@@ -7,6 +7,7 @@ import {
 import type { PostIt, Stroke } from '../db';
 import { strokeGeom } from '../ink';
 import { C, HIGHLIGHT_COLORS, PEN_COLORS, POSTIT_COLORS, STICKERS } from '../theme';
+import ColorPanel from './ColorPanel';
 import { IconBtn } from './ui';
 
 /* =================== Herramientas =================== */
@@ -40,6 +41,7 @@ export function useInkTools(opts: {
   const [penW, setPenW] = useState(mem.penW);
   const [kind, setKindS] = useState<PenKind>(mem.kind);
   const [stickers, setStickers] = useState(false);
+  const [colors, setColors] = useState(false);
 
   const setTool = (t: Tool) => {
     mem.tool = t;
@@ -82,6 +84,7 @@ export function useInkTools(opts: {
                   style={[st.color, { backgroundColor: c }, color === c && st.colorActive]}
                 />
               ))}
+              <IconBtn icon="🎨" title="Más colores y crear color" active={colors} onPress={() => setColors((v) => !v)} />
               {tool === 'pen' && (
                 <>
                   <View style={st.sep} />
@@ -114,6 +117,21 @@ export function useInkTools(opts: {
           {opts.right}
         </ScrollView>
       </View>
+      {colors && (tool === 'pen' || tool === 'highlighter') && (
+        <ColorPanel
+          current={color}
+          onClose={() => setColors(false)}
+          onPick={(c) => {
+            if (tool === 'highlighter') {
+              mem.hl = c;
+              setHl(c);
+            } else {
+              mem.pen = c;
+              setPen(c);
+            }
+          }}
+        />
+      )}
       {stickers && opts.onSticker && (
         <View style={st.stickerBar}>
           {STICKERS.map((e) => (
