@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState as RNAppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, Section, useApp } from './src/AppState';
@@ -11,6 +11,7 @@ import { first } from './src/db';
 import { parseYmd } from './src/dates';
 import * as Notifications from 'expo-notifications';
 import { AgendaAlarm } from './modules/agenda-alarm';
+import { isLockEnabled, lockAfterMinutes } from './src/security';
 import { BIRTHDAY_BASE, dailyRefresh, listenResponses, Reminder, setupNotifications } from './src/notifications';
 import { ContactsScreen } from './src/screens/ContactsScreen';
 import { DayScreen } from './src/screens/DayScreen';
@@ -69,7 +70,8 @@ function Shell() {
       try {
         AgendaAlarm?.stopRinging();
       } catch {}
-      setCoverVisible(false);
+      // Con bloqueo activado, primero hay que desbloquear; el recordatorio queda abierto detrás de la tapa
+      if (!isLockEnabled()) setCoverVisible(false);
       if (rid >= 0) {
         const r = first<Reminder>('SELECT * FROM reminders WHERE id=?', [rid]);
         if (r) {
@@ -101,9 +103,20 @@ function Shell() {
       if (typeof data.reminderId === 'number') openFromAlarm(data.reminderId);
       else if (typeof data.contactId === 'number') setSection('contactos');
     });
+    // Bloqueo al volver a la app después de un rato en segundo plano
+    let bgAt = 0;
+    const appSub = RNAppState.addEventListener('change', (st) => {
+      if (st === 'background') bgAt = Date.now();
+      else if (st === 'active' && bgAt) {
+        const mins = lockAfterMinutes();
+        if (isLockEnabled() && mins >= 0 && Date.now() - bgAt >= mins * 60000) setCoverVisible(true);
+        bgAt = 0;
+      }
+    });
     return () => {
       off();
       sub?.remove();
+      appSub.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

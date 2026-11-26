@@ -27,7 +27,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [section, setSection] = useState<Section>('dia');
   const [date, setDate] = useState(() => new Date());
   const [reminderDraft, setDraft] = useState<ReminderDraft | null>(null);
-  const [coverVisible, setCoverVisible] = useState(() => getSetting('showCover', '1') === '1' || !getSetting('ownerName', ''));
+  const [coverVisible, setCoverVisible] = useState(
+    () =>
+      getSetting('showCover', '1') === '1' ||
+      !getSetting('ownerName', '') ||
+      !!getSetting('lockHash', '') ||
+      getSetting('lockBio', '0') === '1',
+  );
   const value = useMemo<Ctx>(
     () => ({
       section,

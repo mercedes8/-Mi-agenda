@@ -11,7 +11,7 @@ import { pickDate, pickTime } from './pickers';
 import { Btn, Chip, Field, Sheet, Title } from './ui';
 
 export function ReminderModal() {
-  const { reminderDraft, closeReminder } = useApp();
+  const { reminderDraft, closeReminder, coverVisible } = useApp();
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(ymd(new Date()));
@@ -31,7 +31,7 @@ export function ReminderModal() {
     setColor(reminderDraft.color ?? C.accent);
   }, [reminderDraft]);
 
-  if (!reminderDraft) return null;
+  if (!reminderDraft || coverVisible) return null;
   const editing = !!reminderDraft.id;
   const [hh, mm] = time.split(':').map(Number);
   const timeDate = new Date(2000, 0, 1, hh, mm);

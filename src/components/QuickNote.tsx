@@ -10,7 +10,7 @@ import { Btn } from './ui';
 
 /** Nota rápida: se abre con un toque desde cualquier sección */
 export function QuickNoteModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { openReminder } = useApp();
+  const { openReminder, coverVisible } = useApp();
   const [text, setText] = useState('');
   const [saved, setSaved] = useState('');
 
@@ -51,7 +51,7 @@ export function QuickNoteModal({ visible, onClose }: { visible: boolean; onClose
   };
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={close}>
+    <Modal transparent visible={visible && !coverVisible} animationType="fade" onRequestClose={close}>
       <Pressable style={s.backdrop} onPress={close}>
         <Pressable style={s.note} onPress={() => {}}>
           <View style={s.tape} />

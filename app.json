@@ -24,7 +24,8 @@
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -58,6 +59,19 @@
             "com.google.android.googlequicksearchbox",
             "com.google.android.tts"
           ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mi Agenda usa tus fotos para la portada.",
+          "cameraPermission": "Mi Agenda usa la cámara para sacar la foto de la portada."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Mi Agenda usa tu rostro para abrirse."
         }
       ]
     ],
