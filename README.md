@@ -22,6 +22,8 @@ Todo se guarda **solo en la tablet** (SQLite), con exportación e importación d
 | 💰 **Gastos** | Ingresos y gastos por categoría, con totales y saldo del mes. |
 | ⚙️ **Ajustes** | Modo solo lápiz, prueba de sonido, permisos, alarmas exactas y backup. |
 
+**Pasar de hoja:** con ⌨️ activo, deslizá el dedo sobre la hoja y la página te sigue como en una agenda de papel (soltala antes de la mitad y vuelve; pasada la mitad o con un movimiento rápido, se da vuelta). Mientras escribís a mano, usá los bordes o las esquinas dobladas. La tapa también se abre arrastrándola.
+
 **Escritura a mano:** ✒️ pluma (el trazo varía con la presión del lápiz óptico y se suaviza) y 🖊️ birome (trazo parejo).
 
 **Barra de herramientas de cada hoja** (Día, Semana, Mes y Notas): ⌨️ teclado · ✏️ lápiz (7 colores, 4 grosores) · 🖍️ resaltador · 🧽 goma · ↶ deshacer · 🗑️ borrar dibujos · 🟨 post-it (se arrastra, cambia de color y de tamaño) · ⭐ stickers.

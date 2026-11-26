@@ -1,6 +1,6 @@
 import { Canvas, Group, Path } from '@shopify/react-native-skia';
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   GestureDetector, PointerType, usePanGesture, usePinchGesture, useSimultaneousGestures,
 } from 'react-native-gesture-handler';
@@ -364,45 +364,45 @@ export function PostItView({
 
   useEffect(() => setPos({ x: p.x, y: p.y, w: p.w, h: p.h }), [p.x, p.y, p.w, p.h]);
 
-  const mover = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => (start.current = cur.current),
-        onPanResponderMove: (_, g) =>
-          setPos({ ...start.current, x: start.current.x + g.dx / sc.current, y: start.current.y + g.dy / sc.current }),
-        onPanResponderRelease: () => onChange({ ...pRef.current, ...cur.current }),
-        onPanResponderTerminationRequest: () => false,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  const resizer = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => (start.current = cur.current),
-        onPanResponderMove: (_, g) =>
-          setPos({
-            ...start.current,
-            w: Math.max(110, start.current.w + g.dx / sc.current),
-            h: Math.max(90, start.current.h + g.dy / sc.current),
-          }),
-        onPanResponderRelease: () => onChange({ ...pRef.current, ...cur.current }),
-        onPanResponderTerminationRequest: () => false,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  // Gestos nativos: tienen prioridad sobre el deslizar para pasar de hoja
+  const mover = usePanGesture({
+    runOnJS: true,
+    minDistance: 2,
+    onActivate: () => {
+      start.current = cur.current;
+    },
+    onUpdate: (e) => {
+      if (!('translationX' in e)) return;
+      setPos({ ...start.current, x: start.current.x + e.translationX / sc.current, y: start.current.y + e.translationY / sc.current });
+    },
+    onDeactivate: () => onChange({ ...pRef.current, ...cur.current }),
+  });
+  const resizer = usePanGesture({
+    runOnJS: true,
+    minDistance: 1,
+    onActivate: () => {
+      start.current = cur.current;
+    },
+    onUpdate: (e) => {
+      if (!('translationX' in e)) return;
+      setPos({
+        ...start.current,
+        w: Math.max(110, start.current.w + e.translationX / sc.current),
+        h: Math.max(90, start.current.h + e.translationY / sc.current),
+      });
+    },
+    onDeactivate: () => onChange({ ...pRef.current, ...cur.current }),
+  });
 
   if (p.kind === 'sticker') {
     return (
-      <View {...mover.panHandlers} style={{ position: 'absolute', left: pos.x, top: pos.y }}>
-        <Pressable onLongPress={onDelete} delayLongPress={500}>
-          <Text style={{ fontSize: 40 }}>{p.text}</Text>
-        </Pressable>
-      </View>
+      <GestureDetector gesture={mover}>
+        <View style={{ position: 'absolute', left: pos.x, top: pos.y }}>
+          <Pressable onLongPress={onDelete} delayLongPress={500}>
+            <Text style={{ fontSize: 40 }}>{p.text}</Text>
+          </Pressable>
+        </View>
+      </GestureDetector>
     );
   }
 
@@ -413,7 +413,8 @@ export function PostItView({
 
   return (
     <View style={[st.postit, { left: pos.x, top: pos.y, width: pos.w, height: pos.h, backgroundColor: p.color }]}>
-      <View style={st.postitBar} {...mover.panHandlers}>
+      <GestureDetector gesture={mover}>
+      <View style={st.postitBar}>
         <Text style={st.postitGrip}>⠿⠿⠿</Text>
         <Pressable onPress={nextColor} hitSlop={8}>
           <Text style={st.postitBtn}>🎨</Text>
@@ -430,6 +431,7 @@ export function PostItView({
           <Text style={st.postitBtn}>✕</Text>
         </Pressable>
       </View>
+      </GestureDetector>
       <TextInput
         multiline
         value={p.text}
@@ -439,9 +441,11 @@ export function PostItView({
         style={st.postitText}
         textAlignVertical="top"
       />
-      <View style={st.resize} {...resizer.panHandlers}>
-        <Text style={{ fontSize: 14, color: '#0006' }}>◢</Text>
-      </View>
+      <GestureDetector gesture={resizer}>
+        <View style={st.resize}>
+          <Text style={{ fontSize: 14, color: '#0006' }}>◢</Text>
+        </View>
+      </GestureDetector>
     </View>
   );
 }

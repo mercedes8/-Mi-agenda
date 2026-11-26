@@ -3,7 +3,7 @@ import { LayoutChangeEvent, View } from 'react-native';
 import { loadPage, PageData, PostIt, registerOpenPage, savePage, Stroke, useSetting } from '../db';
 import { hits } from '../ink';
 import { confirmClear, InkLayer, newPostIt, PostItView, useInkTools, useStrokeHistory } from './InkTools';
-import { FlipDir, FlipProvider, PageCorners, usePageFlip } from './PageFlip';
+import { FlipDir, FlipProvider, PageCorners, PageFlipApi, SwipeToTurn, usePageFlip } from './PageFlip';
 
 /* =================== Persistencia de la página =================== */
 
@@ -154,6 +154,7 @@ export function InkPage({ pageKey, left, right, children, pageStyle, turn, flipA
       <View style={{ flex: 1 }}>
         {toolbar}
         <View style={{ flex: 1 }}>
+          <MaybeSwipe pf={pf} turn={turn} canTurn={canTurn} enabled={tools.tool === 'type'}>
           <View ref={pf.pageRef} collapsable={false} style={[{ flex: 1 }, pageStyle]} onLayout={onLayout}>
             {children(api)}
             <InkLayer
@@ -166,11 +167,35 @@ export function InkPage({ pageKey, left, right, children, pageStyle, turn, flipA
             {page.postits.map((p) => (
               <PostItView key={p.id} p={p} onChange={h.changePostIt} onDelete={() => h.deletePostIt(p.id)} />
             ))}
-            {turn && <PageCorners onTurn={(d) => (!canTurn || canTurn(d)) && pf.flip(d, () => turn(d))} />}
+            {turn && (
+              <PageCorners
+                edges={tools.tool !== 'type'}
+                onTurn={(d) => (!canTurn || canTurn(d)) && pf.flip(d, () => turn(d))}
+              />
+            )}
           </View>
+          </MaybeSwipe>
           {pf.overlay}
         </View>
       </View>
     </FlipProvider>
+  );
+}
+
+/** Envuelve la hoja con el gesto de deslizar solo si se puede pasar de hoja */
+function MaybeSwipe({
+  pf, turn, canTurn, enabled, children,
+}: {
+  pf: PageFlipApi;
+  turn?: (d: FlipDir) => void;
+  canTurn?: (d: FlipDir) => boolean;
+  enabled: boolean;
+  children: React.ReactNode;
+}) {
+  if (!turn) return <>{children}</>;
+  return (
+    <SwipeToTurn pf={pf} turn={turn} canTurn={canTurn} enabled={enabled}>
+      {children}
+    </SwipeToTurn>
   );
 }

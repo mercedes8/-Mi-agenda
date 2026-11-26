@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert, Animated, Easing, Image, KeyboardAvoidingView, Pressable, StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { useApp } from '../AppState';
 import { useSetting } from '../db';
 import {
@@ -51,7 +52,7 @@ export function Cover() {
     opening.current = true;
     setPw('');
     setError('');
-    Animated.timing(a, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start(() => {
+    Animated.timing(a, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => {
       opening.current = false;
       prompted.current = false;
       a.setValue(0);
@@ -81,6 +82,24 @@ export function Cover() {
       alive = false;
     };
   }, [coverVisible, locked, tryBio]);
+
+  // Abrir la tapa arrastrándola con el dedo (si no está bloqueada)
+  const coverW = useRef(1000);
+  const pan = usePanGesture({
+    runOnJS: true,
+    enabled: !needsName && !locked,
+    activeOffsetX: [-12, 12],
+    onUpdate: (e) => {
+      if (opening.current || !('translationX' in e)) return;
+      a.setValue(Math.max(0, Math.min(1, -e.translationX / (coverW.current * 0.8))));
+    },
+    onDeactivate: (e) => {
+      if (opening.current || !('translationX' in e)) return;
+      const p = -e.translationX / (coverW.current * 0.8);
+      if (p > 0.35 || e.velocityX < -600) open();
+      else Animated.timing(a, { toValue: 0, duration: 220, useNativeDriver: true }).start();
+    },
+  });
 
   if (!coverVisible) return null;
   const year = new Date().getFullYear();
@@ -125,7 +144,11 @@ export function Cover() {
   const backdrop = a.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, s.backdrop, { opacity: backdrop }]}>
+    <Animated.View
+      style={[StyleSheet.absoluteFill, s.backdrop, { opacity: backdrop }]}
+      onLayout={(e) => (coverW.current = e.nativeEvent.layout.width)}
+    >
+      <GestureDetector gesture={pan}>
       <Animated.View
         style={[s.cover, { opacity, transformOrigin: 'left center', transform: [{ perspective: 2000 }, { rotateY: rotate }] }]}
       >
@@ -212,7 +235,7 @@ export function Cover() {
                         )}
                       </View>
                     ) : (
-                      <Text style={s.hint}>Tocá la tapa para abrir</Text>
+                      <Text style={s.hint}>Tocá la tapa o deslizala hacia la izquierda para abrir</Text>
                     )}
                   </>
                 )}
@@ -222,6 +245,7 @@ export function Cover() {
           <View style={s.elastic} />
         </Pressable>
       </Animated.View>
+      </GestureDetector>
     </Animated.View>
   );
 }
