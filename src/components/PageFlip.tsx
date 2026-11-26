@@ -1,7 +1,7 @@
 import { Canvas, Image as SkiaImage, makeImageFromView, SkImage } from '@shopify/react-native-skia';
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, PanResponder, Pressable, StyleSheet, View } from 'react-native';
-import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { GestureDetector, usePanGesture, useSimultaneousGestures, useTapGesture } from 'react-native-gesture-handler';
 import { playPageTurn } from '../sounds';
 import { C } from '../theme';
 
@@ -254,8 +254,27 @@ export function SwipeToTurn({
     },
   });
 
+  // doble toque: a la izquierda va a la hoja anterior, a la derecha a la siguiente
+  const dbl = useTapGesture({
+    runOnJS: true,
+    enabled,
+    numberOfTaps: 2,
+    maxDuration: 350,
+    maxDelay: 350,
+    onActivate: (e) => {
+      const x = 'x' in e ? e.x : width.current / 2;
+      const w = width.current;
+      const dir: FlipDir | null = x < w * 0.4 ? 'prev' : x > w * 0.6 ? 'next' : null;
+      if (!dir) return;
+      const { canTurn: can, turn: t, pf: f } = P.current;
+      if (can && !can(dir)) return;
+      f.flip(dir, () => t(dir));
+    },
+  });
+  const both = useSimultaneousGestures(pan, dbl);
+
   return (
-    <GestureDetector gesture={pan}>
+    <GestureDetector gesture={both}>
       <View style={{ flex: 1 }} onLayout={(e) => (width.current = e.nativeEvent.layout.width)}>
         {children}
       </View>
