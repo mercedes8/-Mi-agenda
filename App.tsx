@@ -4,6 +4,7 @@ import { AppState as RNAppState, Pressable, StyleSheet, Text, View } from 'react
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, Section, useApp } from './src/AppState';
+import { GlobalPostIts } from './src/components/GlobalPostIts';
 import { Cover } from './src/components/Cover';
 import { QuickNoteModal } from './src/components/QuickNote';
 import { ReminderModal } from './src/components/ReminderModal';
@@ -127,6 +128,7 @@ function Shell() {
     <SafeAreaView style={s.root} edges={['top', 'bottom', 'left', 'right']}>
       <View style={s.content}>
         <Screen />
+        <GlobalPostIts />
       </View>
       {/* Pestañas índice al costado, como una agenda de papel */}
       <View style={s.tabs}>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, ToastAndroid, View } from 'react-native';
 import { useApp } from '../AppState';
 import { pickDate } from '../components/pickers';
 import { Btn, Chip, Empty, Field, Sheet, Title } from '../components/ui';
@@ -16,15 +16,28 @@ const CAT_INGRESO = ['Sueldo', 'Trabajos', 'Ventas', 'Otros'];
 export const money = (n: number) =>
   '$ ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/** Acepta 1500, 1500,50, 1.500,50 y 1500.50 */
+function parseAmount(t: string): number {
+  const x = t.replace(/[^\d.,]/g, '');
+  const lastC = x.lastIndexOf(','), lastD = x.lastIndexOf('.');
+  const sep = Math.max(lastC, lastD);
+  if (sep < 0) return Number(x);
+  const dec = x.slice(sep + 1);
+  const intp = x.slice(0, sep).replace(/[.,]/g, '');
+  const onlyOne = (x.match(/[.,]/g) ?? []).length === 1;
+  if (onlyOne && dec.length === 3) return Number(intp + dec); // 1.500 = mil quinientos
+  return Number(intp + '.' + dec);
+}
+
 export function ExpensesScreen() {
-  const { date } = useApp();
+  const { date, setDate } = useApp();
   const period = ym(date);
   const rows = useQuery<Exp>("SELECT * FROM expenses WHERE substr(date,1,7)=? ORDER BY date DESC, id DESC", [period]);
   const [kind, setKind] = useState<'gasto' | 'ingreso'>('gasto');
   const [cat, setCat] = useState('Súper');
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
-  const [day, setDay] = useState(ymd(new Date()));
+  const [day, setDay] = useState(() => ymd(new Date()));
 
   const totalIn = rows.filter((r) => r.kind === 'ingreso').reduce((a, r) => a + r.amount, 0);
   const totalOut = rows.filter((r) => r.kind === 'gasto').reduce((a, r) => a + r.amount, 0);
@@ -34,11 +47,14 @@ export function ExpensesScreen() {
   const max = cats[0]?.[1] ?? 1;
 
   const add = () => {
-    const n = Number(amount.replace(/\./g, '').replace(',', '.'));
+    const n = parseAmount(amount);
     if (!n || n <= 0) return Alert.alert('Monto inválido', 'Escribí un monto mayor a cero (podés usar coma para decimales).');
     run('INSERT INTO expenses (date, kind, category, description, amount) VALUES (?,?,?,?,?)', [day, kind, cat, desc.trim(), n]);
     setDesc('');
     setAmount('');
+    // si el movimiento es de otro mes, mostramos ese mes para que se vea
+    if (ym(parseYmd(day)) !== period) setDate(parseYmd(day));
+    ToastAndroid.show(`${kind === 'gasto' ? 'Gasto' : 'Ingreso'} anotado: ${money(n)}`, ToastAndroid.SHORT);
   };
 
   return (
