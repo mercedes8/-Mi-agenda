@@ -45,7 +45,7 @@ type FlipState = {
   axis: number;
 };
 
-const FULL_MS = 640;
+const FULL_MS = 900;
 
 /**
  * Controlador del pase de hoja. La "posición" de la hoja va de 0 (apoyada) a 2 (ya del otro lado):
@@ -123,10 +123,10 @@ export function usePageFlip(axisMode: 'center' | 'left' = 'center') {
       const from = d.pos;
       const to = commit ? 2 : 0;
       const dist = Math.abs(to - from);
-      const speed = Math.max(1, Math.abs(velocity) / 900);
+      const speed = Math.min(1.5, Math.max(1, Math.abs(velocity) / 1400));
       Animated.timing(a, {
         toValue: to,
-        duration: Math.max(140, (dist * FULL_MS) / 2 / speed),
+        duration: Math.max(380, (dist * FULL_MS) / 2 / speed),
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }).start(() => {
@@ -216,8 +216,8 @@ export function SwipeToTurn({
     runOnJS: true,
     enabled,
     maxPointers: 1,
-    activeOffsetX: [-18, 18],
-    failOffsetY: [-22, 22],
+    activeOffsetX: [-7, 7],
+    failOffsetY: [-40, 40],
     onActivate: (e) => {
       const tx = 'translationX' in e ? e.translationX : 0;
       const dir: FlipDir = tx < 0 ? 'next' : 'prev';
@@ -234,7 +234,7 @@ export function SwipeToTurn({
       const dir = dirRef.current;
       if (!dir || !('translationX' in e)) return;
       const tx = dir === 'next' ? -e.translationX : e.translationX;
-      P.current.pf.moveDrag((tx / (width.current * 0.42)) * 1);
+      P.current.pf.moveDrag((tx / (width.current * 0.22)) * 1);
     },
     onDeactivate: (e) => {
       const dir = dirRef.current;
@@ -242,8 +242,8 @@ export function SwipeToTurn({
       dirRef.current = null;
       const tx = 'translationX' in e ? (dir === 'next' ? -e.translationX : e.translationX) : 0;
       const vx = 'velocityX' in e ? (dir === 'next' ? -e.velocityX : e.velocityX) : 0;
-      const pos = tx / (width.current * 0.42);
-      const commit = vx > 500 || (pos > 1 && vx > -300);
+      const pos = tx / (width.current * 0.22);
+      const commit = vx > 180 || (pos > 0.35 && vx > -250);
       P.current.pf.endDrag(commit, vx);
     },
     onFinalize: () => {
@@ -270,10 +270,10 @@ export function PageCorners({ onTurn, edges = true }: { onTurn: (d: FlipDir) => 
   const make = (dir: FlipDir) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy),
       onPanResponderRelease: (_, g) => {
-        if (dir === 'next' && g.dx < -30) turn.current('next');
-        if (dir === 'prev' && g.dx > 30) turn.current('prev');
+        if (dir === 'next' && g.dx < -16) turn.current('next');
+        if (dir === 'prev' && g.dx > 16) turn.current('prev');
       },
     });
   const right = useRef(make('next')).current;
@@ -315,9 +315,9 @@ function FlipOverlay({ st, a }: { st: FlipState; a: Animated.Value }) {
   const land = a.interpolate({ inputRange: [1, 2], outputRange: [next ? '90deg' : '-90deg', '0deg'], ...clamp });
   const liftOpacity = a.interpolate({ inputRange: [0, 0.999, 1], outputRange: [1, 1, 0], ...clamp });
   const landOpacity = a.interpolate({ inputRange: [0.999, 1], outputRange: [0, 1], ...clamp });
-  const shadeLift = a.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45], ...clamp });
-  const shadeLand = a.interpolate({ inputRange: [1, 2], outputRange: [0.45, 0], ...clamp });
-  const castShadow = a.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 0.25, 0], ...clamp });
+  const shadeLift = a.interpolate({ inputRange: [0, 1], outputRange: [0, 0.6], ...clamp });
+  const shadeLand = a.interpolate({ inputRange: [1, 2], outputRange: [0.6, 0], ...clamp });
+  const castShadow = a.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 0.4, 0], ...clamp });
 
   const liftFrom = next ? axis : 0, liftTo = next ? w : axis;
   const landFrom = next ? 0 : axis, landTo = next ? axis : w;
@@ -336,7 +336,7 @@ function FlipOverlay({ st, a }: { st: FlipState; a: Animated.Value }) {
         style={{
           position: 'absolute', left: liftFrom, top: 0, opacity: liftOpacity,
           transformOrigin: next ? 'left center' : 'right center',
-          transform: [{ perspective: 1800 }, { rotateY: lift }],
+          transform: [{ perspective: 1100 }, { rotateY: lift }],
         }}
       >
         <Half img={old} w={w} h={h} from={liftFrom} to={liftTo} />
@@ -346,7 +346,7 @@ function FlipOverlay({ st, a }: { st: FlipState; a: Animated.Value }) {
         style={{
           position: 'absolute', left: landFrom, top: 0, opacity: landOpacity,
           transformOrigin: next ? 'right center' : 'left center',
-          transform: [{ perspective: 1800 }, { rotateY: land }],
+          transform: [{ perspective: 1100 }, { rotateY: land }],
         }}
       >
         <Half img={nu} w={w} h={h} from={landFrom} to={landTo} />
