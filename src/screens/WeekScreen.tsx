@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useApp } from '../AppState';
 import { InkPage } from '../components/InkPage';
+import { Spine } from '../components/PageFlip';
 import { Rings } from '../components/PaperBg';
 import { pageFields, useDbVersion } from '../db';
 import { addDays, DIAS, holidayOf, isoWeek, MESES, sameDay, startOfWeek, weekKey, ymd } from '../dates';
@@ -10,7 +11,7 @@ import { C } from '../theme';
 import { DateNav, st as day } from './DayScreen';
 
 export function WeekScreen() {
-  const { date, goToDay, openReminder } = useApp();
+  const { date, setDate, goToDay, openReminder } = useApp();
   useDbVersion();
   const start = startOfWeek(date);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -26,6 +27,7 @@ export function WeekScreen() {
   return (
     <InkPage
       pageKey={`week:${weekKey(date)}`}
+      turn={(d) => setDate(addDays(date, d === 'next' ? 7 : -7))}
       left={
         <>
           <DateNav step={7} />
@@ -93,9 +95,9 @@ export function WeekScreen() {
                 />
               </View>
             </View>
-            <View style={day.spine}>
+            <Spine style={day.spine}>
               <Rings count={9} />
-            </View>
+            </Spine>
             <View style={[day.page, day.pageRight, s.col]}>{days.slice(3).map((d, i) => box(d, i + 3))}</View>
           </View>
         );

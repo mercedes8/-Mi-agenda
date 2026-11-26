@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useApp } from '../AppState';
 import { InkPage } from '../components/InkPage';
+import { Spine } from '../components/PageFlip';
 import { PaperBg, Rings } from '../components/PaperBg';
 import { Check, LineInput, Title } from '../components/ui';
 import { pageFields, run, useDbVersion, useQuery } from '../db';
@@ -55,7 +56,7 @@ export function GoalList({ period, compact }: { period: string; compact?: boolea
 }
 
 export function MonthScreen() {
-  const { date, goToDay, openReminder } = useApp();
+  const { date, setDate, goToDay, openReminder } = useApp();
   useDbVersion();
   const reminders = useReminders();
   const contacts = useContacts();
@@ -65,6 +66,7 @@ export function MonthScreen() {
   return (
     <InkPage
       pageKey={`month:${period}`}
+      turn={(d) => setDate(new Date(date.getFullYear(), date.getMonth() + (d === 'next' ? 1 : -1), 1))}
       left={
         <>
           <DateNav unit="month" />
@@ -127,9 +129,9 @@ export function MonthScreen() {
             ))}
             <Text style={s.hint}>Tocá un día para abrir su hoja · mantené presionado para agregar un recordatorio</Text>
           </View>
-          <View style={day.spine}>
+          <Spine style={day.spine}>
             <Rings count={9} />
-          </View>
+          </Spine>
           <View style={[day.page, day.pageRight]}>
             <Title>🎯 Metas del mes</Title>
             <GoalList period={period} compact />

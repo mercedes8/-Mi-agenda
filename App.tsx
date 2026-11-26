@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, Section, useApp } from './src/AppState';
+import { Cover } from './src/components/Cover';
 import { ReminderModal } from './src/components/ReminderModal';
 import { first } from './src/db';
 import { parseYmd } from './src/dates';
@@ -96,6 +97,7 @@ function Shell() {
         })}
       </View>
       <ReminderModal />
+      <Cover />
     </SafeAreaView>
   );
 }

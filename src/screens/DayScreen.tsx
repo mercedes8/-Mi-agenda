@@ -3,9 +3,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useApp } from '../AppState';
 import { InkPage } from '../components/InkPage';
 import { PaperBg, Rings } from '../components/PaperBg';
+import { Spine, useFlip } from '../components/PageFlip';
 import { pickDate } from '../components/pickers';
 import { Check, IconBtn, LineInput, Title } from '../components/ui';
-import { Task } from '../db';
+import { Task, useSetting } from '../db';
 import {
   addDays, dayOfYear, daysInYear, DIAS, holidayOf, hm, isoWeek, MESES, moonOf, sameDay, ymd,
 } from '../dates';
@@ -18,25 +19,33 @@ const MOODS = ['😄', '🙂', '😐', '😕', '😢'];
 
 export function DateNav({ step = 1, unit = 'day' }: { step?: number; unit?: 'day' | 'month' | 'year' }) {
   const { date, setDate } = useApp();
+  const flip = useFlip();
+  /** Cambia de fecha; si la pantalla lo permite, pasando la hoja con animación */
+  const go = (d: Date) => {
+    if (ymd(d) === ymd(date)) return;
+    if (flip) flip(d > date ? 'next' : 'prev', () => setDate(d));
+    else setDate(d);
+  };
   const move = (n: number) => {
-    if (unit === 'day') setDate(addDays(date, n * step));
-    else if (unit === 'month') setDate(new Date(date.getFullYear(), date.getMonth() + n, 1));
-    else setDate(new Date(date.getFullYear() + n, 0, 1));
+    if (unit === 'day') go(addDays(date, n * step));
+    else if (unit === 'month') go(new Date(date.getFullYear(), date.getMonth() + n, 1));
+    else go(new Date(date.getFullYear() + n, 0, 1));
   };
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <IconBtn icon="◀" title="Anterior" onPress={() => move(-1)} />
-      <Pressable onPress={() => setDate(new Date())} style={st.today}>
+      <Pressable onPress={() => go(new Date())} style={st.today}>
         <Text style={st.todayText}>Hoy</Text>
       </Pressable>
       <IconBtn icon="▶" title="Siguiente" onPress={() => move(1)} />
-      <IconBtn icon="📅" title="Elegir fecha" onPress={() => pickDate(date, setDate)} />
+      <IconBtn icon="📅" title="Elegir fecha" onPress={() => pickDate(date, go)} />
     </View>
   );
 }
 
 export function DayScreen() {
-  const { date, openReminder } = useApp();
+  const { date, setDate, openReminder } = useApp();
+  const [ownerName] = useSetting('ownerName', '');
   const reminders = remindersOn(useReminders(), date);
   const birthdays = birthdaysOn(useContacts(), date);
   const holiday = holidayOf(date);
@@ -53,6 +62,7 @@ export function DayScreen() {
   return (
     <InkPage
       pageKey={key}
+      turn={(d) => setDate(addDays(date, d === 'next' ? 1 : -1))}
       left={<DateNav />}
       right={
         <IconBtn icon="🔔" title="Nuevo recordatorio" onPress={() => openReminder({ date: ymd(date), time: '09:00' })} />
@@ -135,9 +145,9 @@ export function DayScreen() {
               </View>
             </View>
 
-            <View style={st.spine}>
+            <Spine style={st.spine}>
               <Rings count={9} />
-            </View>
+            </Spine>
 
             {/* ---------- Página derecha ---------- */}
             <View style={[st.page, st.pageRight]}>
@@ -199,6 +209,7 @@ export function DayScreen() {
                 <Text style={st.trackTitle}>Agradezco: </Text>
                 <LineInput style={{ flex: 1 }} value={page.fields.gratitud ?? ''} onChangeText={(v) => setField('gratitud', v)} />
               </View>
+              {ownerName ? <Text style={st.owner}>Agenda de {ownerName}</Text> : null}
             </View>
           </View>
         );
@@ -241,4 +252,5 @@ export const st = StyleSheet.create({
   glass: { fontSize: 22, marginRight: 2 },
   today: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: C.accent, borderRadius: 8, marginHorizontal: 2 },
   todayText: { color: '#fff', fontWeight: '800' },
+  owner: { fontSize: 11, color: C.inkSoft, fontStyle: 'italic', textAlign: 'right', marginTop: 2, marginRight: 30 },
 });

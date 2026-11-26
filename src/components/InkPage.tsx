@@ -6,6 +6,7 @@ import {
 import { GestureDetector, PointerType, usePanGesture } from 'react-native-gesture-handler';
 import { loadPage, PageData, PostIt, savePage, Stroke, useSetting } from '../db';
 import { C, HIGHLIGHT_COLORS, PEN_COLORS, POSTIT_COLORS, STICKERS } from '../theme';
+import { FlipDir, FlipProvider, PageCorners, usePageFlip } from './PageFlip';
 import { IconBtn } from './ui';
 
 /* =================== Persistencia de la página =================== */
@@ -285,10 +286,13 @@ type Props = {
   /** Fondo/contenido de la hoja. Recibe la página para leer/escribir campos */
   children: (api: ReturnType<typeof usePage>) => React.ReactNode;
   pageStyle?: object;
+  /** Cambia la fecha al pasar de hoja (esquinas / deslizar). Si falta, no se puede pasar de hoja. */
+  turn?: (dir: FlipDir) => void;
 };
 
-export function InkPage({ pageKey, left, right, children, pageStyle }: Props) {
+export function InkPage({ pageKey, left, right, children, pageStyle, turn }: Props) {
   const api = usePage(pageKey);
+  const pf = usePageFlip();
   const { page, update } = api;
   const [stylusOnly] = useSetting('stylusOnly', '0');
   const [tool, setToolState] = useState<Tool>(toolMemory.tool);
@@ -382,6 +386,7 @@ export function InkPage({ pageKey, left, right, children, pageStyle }: Props) {
   const palette = tool === 'highlighter' ? HIGHLIGHT_COLORS : PEN_COLORS;
 
   return (
+    <FlipProvider value={pf.ctx}>
     <View style={{ flex: 1 }}>
       <View style={st.toolbar}>
         <View style={st.tbLeft}>{left}</View>
@@ -446,7 +451,8 @@ export function InkPage({ pageKey, left, right, children, pageStyle }: Props) {
           <Text style={{ color: C.inkSoft, fontSize: 12, marginLeft: 8 }}>Mantené presionado un sticker para quitarlo</Text>
         </View>
       )}
-      <View style={[{ flex: 1 }, pageStyle]} onLayout={onLayout}>
+      <View style={{ flex: 1 }}>
+      <View ref={pf.pageRef} collapsable={false} style={[{ flex: 1 }, pageStyle]} onLayout={onLayout}>
         {children(api)}
         <InkLayer
           strokes={page.strokes}
@@ -460,8 +466,12 @@ export function InkPage({ pageKey, left, right, children, pageStyle }: Props) {
         {page.postits.map((p) => (
           <PostItView key={p.id} p={p} onChange={changePostIt} onDelete={() => deletePostIt(p.id)} />
         ))}
+        {turn && <PageCorners onTurn={(d) => pf.flip(d, () => turn(d))} />}
+      </View>
+      {pf.overlay}
       </View>
     </View>
+    </FlipProvider>
   );
 }
 

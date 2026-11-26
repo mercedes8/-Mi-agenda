@@ -2,7 +2,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useApp } from '../AppState';
 import { Btn, Sheet, Title } from '../components/ui';
 import { exportAll, importAll, useSetting } from '../db';
 import { ymd } from '../dates';
@@ -22,7 +23,11 @@ function Row({ title, desc, children }: { title: string; desc?: string; children
 }
 
 export function SettingsScreen() {
+  const { setCoverVisible } = useApp();
   const [stylusOnly, setStylusOnly] = useSetting('stylusOnly', '0');
+  const [owner, setOwner] = useSetting('ownerName', '');
+  const [contact, setContact] = useSetting('ownerContact', '');
+  const [showCover, setShowCover] = useSetting('showCover', '1');
   const [exact, setExact] = useSetting('exactAlarms', '1');
   const [exactOk, setExactOk] = useState(true);
   useEffect(() => {
@@ -68,6 +73,20 @@ export function SettingsScreen() {
       <Sheet style={{ flex: 1 }}>
         <ScrollView>
           <Title style={{ fontSize: 20 }}>⚙️ Ajustes</Title>
+
+          <Text style={s.group}>Mi agenda</Text>
+          <Row title="Nombre de quien la usa" desc="Aparece en la tapa y al pie de cada hoja.">
+            <TextInput style={s.input} value={owner} onChangeText={setOwner} placeholder="Tu nombre" placeholderTextColor="#B8AFA2" />
+          </Row>
+          <Row title="Contacto si se pierde" desc="Opcional. Se muestra en la tapa.">
+            <TextInput style={s.input} value={contact} onChangeText={setContact} placeholder="Teléfono o email" placeholderTextColor="#B8AFA2" />
+          </Row>
+          <Row title="Mostrar la tapa al abrir la app">
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Switch value={showCover === '1'} onValueChange={(v) => setShowCover(v ? '1' : '0')} trackColor={{ true: C.accent }} />
+              <Btn small outline label="📕 Ver la tapa" onPress={() => setCoverVisible(true)} />
+            </View>
+          </Row>
 
           <Text style={s.group}>Escritura a mano</Text>
           <Row
@@ -142,4 +161,8 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.line, gap: 16 },
   rowTitle: { fontSize: 16, fontWeight: '700', color: C.ink },
   rowDesc: { fontSize: 13, color: C.inkSoft, marginTop: 2 },
+  input: {
+    width: 300, borderWidth: 1, borderColor: '#DDD2BF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
+    fontSize: 16, color: C.ink, backgroundColor: '#fff',
+  },
 });
