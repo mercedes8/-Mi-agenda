@@ -42,6 +42,23 @@
             "./assets/sounds/campanita.wav"
           ]
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Mi Agenda usa el micrófono para grabar reuniones y notas de voz."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Mi Agenda usa el micrófono para grabar y transcribir.",
+          "speechRecognitionPermission": "Mi Agenda transcribe tus grabaciones a texto.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.tts"
+          ]
+        }
       ]
     ],
     "experiments": {

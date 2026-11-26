@@ -17,9 +17,12 @@ Todo se guarda **solo en la tablet** (SQLite), con exportación e importación d
 | ☑️ **Listas** | Listas con casillas (compras, pendientes, libros…). |
 | 🔥 **Hábitos** | Seguimiento mensual con racha. |
 | 🎯 **Metas** | Metas del año y del mes con progreso, palabra del año, áreas de la vida y reflexión mensual. |
-| 📝 **Notas** | Hojas libres rayadas, cuadriculadas, punteadas o lisas. |
+| 📚 **Cuadernos** | Biblioteca con carpetas, búsqueda en todo el contenido y notas fijadas. Tipos: **Cuaderno** (varias hojas que se pasan con animación, papel rayado, cuadriculado, punteado o liso), **Reunión** (fecha, lugar, asistentes, objetivo, notas, decisiones, tareas con responsable y fecha que se pueden convertir en recordatorio, y grabación con transcripción; se comparte como acta), **Pizarra** (lienzo infinito con zoom y desplazamiento con dos dedos), **Documento** (títulos, viñetas, numeradas, casillas, citas, negrita, cursiva y subrayado; se exporta a Markdown), **PDF** (importás un PDF, escribís encima y exportás el PDF anotado) y **Grabación** (audio con transcripción automática en español). |
+| ⚡ **Nota rápida** | Botón amarillo arriba de las pestañas: anotás una idea y la guardás, la pegás como post-it en el día de hoy o la convertís en recordatorio. |
 | 💰 **Gastos** | Ingresos y gastos por categoría, con totales y saldo del mes. |
 | ⚙️ **Ajustes** | Modo solo lápiz, prueba de sonido, permisos, alarmas exactas y backup. |
+
+**Escritura a mano:** ✒️ pluma (el trazo varía con la presión del lápiz óptico y se suaviza) y 🖊️ birome (trazo parejo).
 
 **Barra de herramientas de cada hoja** (Día, Semana, Mes y Notas): ⌨️ teclado · ✏️ lápiz (7 colores, 4 grosores) · 🖍️ resaltador · 🧽 goma · ↶ deshacer · 🗑️ borrar dibujos · 🟨 post-it (se arrastra, cambia de color y de tamaño) · ⭐ stickers.
 
@@ -65,6 +68,10 @@ src/occurs.ts              qué recordatorios caen en cada día (repeticiones)
 src/components/InkPage.tsx hoja con tinta (Skia), herramientas y post-its
 src/components/PaperBg.tsx fondos de papel y anillas
 src/components/ReminderModal.tsx
+src/components/InkTools.tsx   herramientas, capa de tinta (presión, zoom) y post-its
+src/components/Recorder.tsx   grabación + transcripción
+src/screens/notebook/*        editores: cuaderno, reunión, pizarra, documento, PDF, grabación
+modules/pdf-renderer/         módulo nativo (Kotlin) para leer y generar PDF
 src/screens/*              Día, Semana, Mes, Año, Avisos, Contactos, Listas, Hábitos, Metas, Notas, Gastos, Ajustes
 assets/sounds/campanita.wav sonido del recordatorio (reemplazable por otro .wav con el mismo nombre)
 ```
@@ -73,4 +80,6 @@ assets/sounds/campanita.wav sonido del recordatorio (reemplazable por otro .wav 
 
 - La orientación está fija en **horizontal**, porque los trazos se guardan en coordenadas de pantalla.
 - Para cambiar el sonido, reemplazá `assets/sounds/campanita.wav` y volvé a compilar. Si ya estaba instalada, desinstalala antes, porque Android guarda el sonido del canal.
+- La transcripción usa el reconocimiento de voz de Google del sistema. Grabar y transcribir al mismo tiempo requiere **Android 13 o superior**; en equipos más viejos se graba solo el audio.
+- La copia de seguridad no incluye los PDF importados ni los audios.
 - Los feriados nacionales se calculan solos (incluye Carnaval y Semana Santa). Los trasladables se muestran en su fecha nominal.

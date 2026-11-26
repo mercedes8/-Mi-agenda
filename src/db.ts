@@ -35,8 +35,24 @@ CREATE TABLE IF NOT EXISTS expenses (
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY NOT NULL, value TEXT);
 `);
 
+/* ---------- Migraciones (columnas nuevas para Cuadernos) ---------- */
+db.execSync(`CREATE TABLE IF NOT EXISTS folders (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color TEXT DEFAULT '#7986CB');`);
+const noteCols = db.getAllSync<{ name: string }>('PRAGMA table_info(notes)').map((c) => c.name);
+for (const [col, def] of [
+  ['kind', "TEXT DEFAULT 'hoja'"],
+  ['folder_id', 'INTEGER'],
+  ['pages', 'INTEGER DEFAULT 1'],
+  ['file', 'TEXT'],
+  ['extra', "TEXT DEFAULT '{}'"],
+  ['created', 'INTEGER'],
+  ['pinned', 'INTEGER DEFAULT 0'],
+] as const) {
+  if (!noteCols.includes(col)) db.execSync(`ALTER TABLE notes ADD COLUMN ${col} ${def}`);
+}
+
 export const TABLES = [
   'pages', 'reminders', 'contacts', 'lists', 'list_items', 'habits', 'habit_logs', 'goals', 'notes', 'expenses', 'settings',
+  'folders',
 ] as const;
 
 /* ---------- Mini store: avisa a las pantallas cuando cambian los datos ---------- */
@@ -85,7 +101,13 @@ export function useSetting(key: string, def: string): [string, (v: string) => vo
 }
 
 /* ---------- Páginas (dibujo + post-its + campos de texto) ---------- */
-export type Stroke = { c: string; w: number; o: number; p: number[] }; // color, ancho, opacidad, puntos x,y,x,y...
+/**
+ * Trazo a mano. c=color, w=ancho, o=opacidad.
+ * p = puntos: x,y,x,y… (trazos viejos) o x,y,presión,… cuando v=2.
+ * k = tipo de lápiz ('pluma' varía con la presión, 'birome' y 'resaltador' son de ancho fijo).
+ * pr = true si la presión vino de un lápiz óptico real.
+ */
+export type Stroke = { c: string; w: number; o: number; p: number[]; v?: 2; k?: 'pluma' | 'birome' | 'resaltador'; pr?: boolean };
 export type PostIt = {
   id: string; x: number; y: number; w: number; h: number; color: string; text: string; kind: 'note' | 'sticker';
 };
@@ -110,6 +132,21 @@ export function loadPage(key: string): PageData {
 export function savePage(key: string, data: PageData) {
   db.runSync('INSERT OR REPLACE INTO pages (key, data, updated) VALUES (?, ?, ?)', [key, JSON.stringify(data), Date.now()]);
 }
+/* Editores abiertos: permiten modificar una página desde afuera sin pisar cambios */
+const openPages = new Map<string, (fn: (p: PageData) => PageData) => void>();
+export function registerOpenPage(key: string, update: (fn: (p: PageData) => PageData) => void) {
+  openPages.set(key, update);
+  return () => {
+    if (openPages.get(key) === update) openPages.delete(key);
+  };
+}
+/** Modifica una página: si está abierta en pantalla usa su editor, si no la guarda directo */
+export function updatePageAnywhere(key: string, fn: (p: PageData) => PageData) {
+  const open = openPages.get(key);
+  if (open) open(fn);
+  else savePage(key, fn(loadPage(key)));
+}
+
 /** Lee solo los campos de una página (para vistas resumen) */
 export function pageFields(key: string): Record<string, string> {
   return loadPage(key).fields;

@@ -4,7 +4,7 @@ import type { Reminder } from './notifications';
 
 export type Section =
   | 'dia' | 'semana' | 'mes' | 'anio' | 'recordatorios' | 'contactos'
-  | 'listas' | 'habitos' | 'metas' | 'notas' | 'gastos' | 'ajustes';
+  | 'listas' | 'habitos' | 'metas' | 'cuadernos' | 'gastos' | 'ajustes';
 
 export type ReminderDraft = Partial<Reminder> & { date: string };
 

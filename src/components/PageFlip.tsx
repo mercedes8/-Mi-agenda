@@ -50,7 +50,7 @@ const PHASE_MS = 330;
  * Controlador del pase de hoja: saca una "foto" de la página antes de cambiar la fecha
  * y anima una hoja que gira en 3D sobre el lomo, como una agenda de papel.
  */
-export function usePageFlip() {
+export function usePageFlip(axisMode: 'center' | 'left' = 'center') {
   const pageRef = useRef<ViewRef | null>(null);
   const spineRef = useRef<ViewRef | null>(null);
   const busy = useRef(false);
@@ -74,7 +74,7 @@ export function usePageFlip() {
         return;
       }
       const spine = await measure(spineRef);
-      const axis = spine ? spine.x + spine.w / 2 - page.x : page.w / 2;
+      const axis = spine ? spine.x + spine.w / 2 - page.x : axisMode === 'left' ? 0 : page.w / 2;
       a.setValue(0);
       setSt({ dir, old, nu: null, w: page.w, h: page.h, axis, phase: 1 });
       // La hoja vieja ya tapa la pantalla: cambiamos la fecha por debajo
@@ -100,7 +100,7 @@ export function usePageFlip() {
         });
       });
     },
-    [a],
+    [a, axisMode],
   );
 
   const ctx = useMemo<Ctx>(() => ({ flip, spineRef }), [flip]);

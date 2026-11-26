@@ -136,7 +136,7 @@ export function SettingsScreen() {
           <Text style={s.group}>Copia de seguridad</Text>
           <Row
             title="Exportar"
-            desc="Genera un archivo con toda la agenda (hojas, dibujos, post-its, contactos, gastos…). Guardalo en Drive, mail o un pendrive."
+            desc="Genera un archivo con toda la agenda (hojas, dibujos, post-its, cuadernos, contactos, gastos…). No incluye los PDF importados ni los audios grabados. Guardalo en Drive, mail o un pendrive."
           >
             <Btn small label="⬆️ Exportar" onPress={doExport} />
           </Row>

@@ -1,10 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, Section, useApp } from './src/AppState';
 import { Cover } from './src/components/Cover';
+import { QuickNoteModal } from './src/components/QuickNote';
 import { ReminderModal } from './src/components/ReminderModal';
 import { first } from './src/db';
 import { parseYmd } from './src/dates';
@@ -16,7 +17,7 @@ import { GoalsScreen } from './src/screens/GoalsScreen';
 import { HabitsScreen } from './src/screens/HabitsScreen';
 import { ListsScreen } from './src/screens/ListsScreen';
 import { MonthScreen } from './src/screens/MonthScreen';
-import { NotesScreen } from './src/screens/NotesScreen';
+import { NotebooksScreen } from './src/screens/NotebooksScreen';
 import { RemindersScreen } from './src/screens/RemindersScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { WeekScreen } from './src/screens/WeekScreen';
@@ -33,7 +34,7 @@ const TABS: [Section, string, string][] = [
   ['listas', '☑️', 'Listas'],
   ['habitos', '🔥', 'Hábitos'],
   ['metas', '🎯', 'Metas'],
-  ['notas', '📝', 'Notas'],
+  ['cuadernos', '📚', 'Cuadernos'],
   ['gastos', '💰', 'Gastos'],
   ['ajustes', '⚙️', 'Ajustes'],
 ];
@@ -50,7 +51,7 @@ function Screen() {
     case 'listas': return <ListsScreen />;
     case 'habitos': return <HabitsScreen />;
     case 'metas': return <GoalsScreen />;
-    case 'notas': return <NotesScreen />;
+    case 'cuadernos': return <NotebooksScreen />;
     case 'gastos': return <ExpensesScreen />;
     case 'ajustes': return <SettingsScreen />;
   }
@@ -58,6 +59,7 @@ function Screen() {
 
 function Shell() {
   const { section, setSection, goToDay } = useApp();
+  const [quick, setQuick] = useState(false);
 
   useEffect(() => {
     setupNotifications().catch(console.warn);
@@ -80,6 +82,10 @@ function Shell() {
       </View>
       {/* Pestañas índice al costado, como una agenda de papel */}
       <View style={s.tabs}>
+        <Pressable onPress={() => setQuick(true)} style={s.quick} accessibilityLabel="Nota rápida">
+          <Text style={{ fontSize: 20 }}>⚡</Text>
+          <Text style={s.quickText}>Rápida</Text>
+        </Pressable>
         {TABS.map(([id, icon, label], i) => {
           const active = id === section;
           return (
@@ -97,6 +103,7 @@ function Shell() {
         })}
       </View>
       <ReminderModal />
+      <QuickNoteModal visible={quick} onClose={() => setQuick(false)} />
       <Cover />
     </SafeAreaView>
   );
@@ -124,6 +131,11 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', opacity: 0.85,
   },
   tabActive: { marginLeft: -4, opacity: 1, borderLeftWidth: 0, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 4, elevation: 6 },
-  tabIcon: { fontSize: 20 },
-  tabText: { fontSize: 12, color: '#2b2b2b', fontWeight: '700' },
+  tabIcon: { fontSize: 18 },
+  quick: {
+    height: 54, marginLeft: 6, marginBottom: 4, borderRadius: 12, backgroundColor: '#FFF59D', alignItems: 'center',
+    justifyContent: 'center', elevation: 4, transform: [{ rotate: '-3deg' }],
+  },
+  quickText: { fontSize: 11, fontWeight: '900', color: '#6D5A00' },
+  tabText: { fontSize: 11, color: '#2b2b2b', fontWeight: '700' },
 });
