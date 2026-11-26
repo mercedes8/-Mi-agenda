@@ -3,6 +3,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { AgendaAlarm } from '../../modules/agenda-alarm';
 import { useApp } from '../AppState';
 import { Btn, Sheet, Title } from '../components/ui';
 import { exportAll, importAll, useSetting } from '../db';
@@ -30,8 +31,12 @@ export function SettingsScreen() {
   const [showCover, setShowCover] = useSetting('showCover', '1');
   const [exact, setExact] = useSetting('exactAlarms', '1');
   const [exactOk, setExactOk] = useState(true);
+  const [fullOk, setFullOk] = useState(true);
   useEffect(() => {
     exactAlarmStatus().then(setExactOk);
+    try {
+      setFullOk(AgendaAlarm?.canUseFullScreen() ?? true);
+    } catch {}
   }, []);
 
   const doExport = async () => {
@@ -97,7 +102,10 @@ export function SettingsScreen() {
           </Row>
 
           <Text style={s.group}>Recordatorios y sonido</Text>
-          <Row title="Probar sonido" desc="Lanza una notificación de prueba en 3 segundos.">
+          <Row
+            title="Probar alarma"
+            desc="En 3 segundos suena una alarma de prueba. Los recordatorios suenan con el volumen de ALARMA, así que se escuchan aunque la tablet esté en silencio."
+          >
             <Btn small label="🔔 Probar" onPress={() => testNotification()} />
           </Row>
           <Row title="Permiso de notificaciones" desc="Necesario para que suenen los recordatorios.">
@@ -123,6 +131,14 @@ export function SettingsScreen() {
               {!exactOk && <Btn small label="Habilitar" onPress={async () => setExactOk(await requestExactAlarm())} />}
             </View>
           </Row>
+          {AgendaAlarm && !fullOk && (
+            <Row
+              title="Mostrar en pantalla completa"
+              desc="⚠️ Android no deja que la alarma aparezca en pantalla completa. Activalo para ver el recordatorio aunque la tablet esté bloqueada."
+            >
+              <Btn small label="Activar" onPress={() => AgendaAlarm?.openFullScreenSettings()} />
+            </Row>
+          )}
           <Row
             title="Batería"
             desc="Algunas marcas (Samsung, Xiaomi, Motorola) frenan apps en segundo plano. Si un aviso no suena, poné la app como 'Sin restricciones' en Ajustes > Batería."

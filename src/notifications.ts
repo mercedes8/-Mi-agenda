@@ -1,7 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { all, bump, db, getSetting, run } from './db';
-import { parseYmd } from './dates';
+import { AgendaAlarm } from '../modules/agenda-alarm';
+import { all, bump, db, getSetting, run, setSetting } from './db';
+import { addDays, parseYmd, ymd } from './dates';
+import { occursOn } from './occurs';
 
 export const CHANNEL_ID = 'recordatorios-campanita';
 export const SOUND = 'campanita.wav';
@@ -64,6 +66,7 @@ export async function setupNotifications() {
 
 export async function exactAlarmStatus() {
   if (Platform.OS !== 'android') return true;
+  if (AgendaAlarm) return AgendaAlarm.canScheduleExact();
   try {
     return (await Notifications.getExactAlarmPermissionsAsync()).granted;
   } catch {
@@ -72,6 +75,10 @@ export async function exactAlarmStatus() {
 }
 export async function requestExactAlarm() {
   if (Platform.OS !== 'android') return true;
+  if (AgendaAlarm) {
+    AgendaAlarm.openExactAlarmSettings();
+    return AgendaAlarm.canScheduleExact();
+  }
   try {
     return (await Notifications.requestExactAlarmPermissionsAsync()).granted;
   } catch {
@@ -102,16 +109,67 @@ export function reminderFireDate(r: Pick<Reminder, 'date' | 'time' | 'advance'>)
 }
 
 async function cancelIds(json: string | null) {
+  let ids: string[] = [];
   try {
-    const ids: string[] = JSON.parse(json || '[]');
-    await Promise.all(ids.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
-  } catch {}
+    const v = JSON.parse(json || '[]');
+    ids = Array.isArray(v) ? v : [String(v)];
+  } catch {
+    if (json) ids = [json];
+  }
+  await Promise.all(
+    ids.map(async (id) => {
+      if (id.startsWith('alarm:')) {
+        try {
+          AgendaAlarm?.cancel(id.slice(6));
+        } catch {}
+      } else await Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+    }),
+  );
+}
+
+/** Próximas veces que tiene que sonar un recordatorio (las alarmas nativas no se repiten solas) */
+const HORIZON: Record<Repeat, [number, number]> = {
+  // [días hacia adelante, máximo de alarmas]
+  none: [0, 1], daily: [21, 21], weekdays: [28, 20], weekly: [84, 12], monthly: [370, 12], yearly: [740, 2],
+};
+export function nextFires(r: Reminder, max?: number): Date[] {
+  const now = Date.now();
+  const [hh, mm] = r.time.split(':').map(Number);
+  const at = (d: Date) => {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm, 0, 0);
+    return new Date(x.getTime() - (r.advance || 0) * 60000);
+  };
+  if (r.repeat === 'none') {
+    const f = at(parseYmd(r.date));
+    return f.getTime() > now ? [f] : [];
+  }
+  const [days, cap] = HORIZON[r.repeat];
+  const out: Date[] = [];
+  const start = new Date(Math.max(parseYmd(r.date).getTime(), new Date(new Date().toDateString()).getTime()));
+  for (let i = 0; i <= days + 1 && out.length < (max ?? cap); i++) {
+    const d = addDays(start, i);
+    if (!occursOn(r, d)) continue;
+    const f = at(d);
+    if (f.getTime() > now) out.push(f);
+  }
+  return out;
 }
 
 export async function scheduleReminder(r: Reminder): Promise<string[]> {
   await cancelIds(r.notif_ids);
   const ids: string[] = [];
-  if (!r.done) {
+  if (!r.done && AgendaAlarm) {
+    const body = (r.notes ? r.notes + ' · ' : '') + `${r.time} hs`;
+    for (const f of nextFires(r)) {
+      const id = `r${r.id}_${f.getTime()}`;
+      try {
+        AgendaAlarm.schedule(id, f.getTime(), `🔔 ${r.title}`, body, r.id);
+        ids.push(`alarm:${id}`);
+      } catch (e) {
+        console.warn('No se pudo programar la alarma', e);
+      }
+    }
+  } else if (!r.done) {
     const fire = reminderFireDate(r);
     const body = (r.notes ? r.notes + ' · ' : '') + `${r.time} hs`;
     const c = content(`🔔 ${r.title}`, body, { reminderId: r.id });
@@ -158,10 +216,22 @@ export async function cancelReminder(r: Pick<Reminder, 'notif_ids'>) {
   await cancelIds(r.notif_ids);
 }
 
+export const BIRTHDAY_BASE = -1000;
 export async function scheduleBirthday(c: Contact) {
-  if (c.notif_id) await Notifications.cancelScheduledNotificationAsync(c.notif_id).catch(() => {});
+  await cancelIds(c.notif_id);
   let id: string | null = null;
-  if (c.bday_day && c.bday_month) {
+  if (c.bday_day && c.bday_month && AgendaAlarm) {
+    const ids: string[] = [];
+    const now = new Date();
+    for (const y of [now.getFullYear(), now.getFullYear() + 1]) {
+      const f = new Date(y, c.bday_month - 1, c.bday_day, 9, 0, 0);
+      if (f.getTime() <= Date.now() || ids.length >= 1) continue;
+      const aid = `c${c.id}_${f.getTime()}`;
+      AgendaAlarm.schedule(aid, f.getTime(), `🎂 Hoy es el cumpleaños de ${c.name}`, '¡No te olvides de saludar!', BIRTHDAY_BASE - c.id);
+      ids.push(`alarm:${aid}`);
+    }
+    id = JSON.stringify(ids);
+  } else if (c.bday_day && c.bday_month) {
     try {
       id = await Notifications.scheduleNotificationAsync({
         content: content(`🎂 Hoy es el cumpleaños de ${c.name}`, '¡No te olvides de saludar!', { contactId: c.id }),
@@ -180,12 +250,25 @@ export async function scheduleBirthday(c: Contact) {
 /** Reprograma todo (después de importar un backup o cambiar ajustes). */
 export async function rescheduleAll() {
   await Notifications.cancelAllScheduledNotificationsAsync();
+  try {
+    AgendaAlarm?.cancelAll();
+  } catch {}
   for (const r of all<Reminder>('SELECT * FROM reminders')) await scheduleReminder({ ...r, notif_ids: '[]' });
   for (const c of all<Contact>('SELECT * FROM contacts')) await scheduleBirthday({ ...c, notif_id: null });
+  setSetting('lastReschedule', ymd(new Date()));
   bump();
 }
 
+/** Una vez por día reprograma todo, para que los recordatorios que se repiten sigan sonando */
+export async function dailyRefresh() {
+  if (getSetting('lastReschedule', '') !== ymd(new Date())) await rescheduleAll();
+}
+
 export async function testNotification() {
+  if (AgendaAlarm) {
+    AgendaAlarm.schedule('prueba', Date.now() + 3000, '🔔 Prueba de recordatorio', 'Así va a sonar tu agenda. Tocá Detener para cortarlo.', -1);
+    return;
+  }
   await Notifications.scheduleNotificationAsync({
     content: content('🔔 Prueba de recordatorio', 'Así va a sonar tu agenda', {}),
     trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3, channelId: CHANNEL_ID },
@@ -210,4 +293,17 @@ export function listenResponses(onOpen: (data: Record<string, unknown>) => void)
     await Notifications.dismissNotificationAsync(resp.notification.request.identifier).catch(() => {});
   });
   return () => sub.remove();
+}
+
+/** Posponer 10 minutos un recordatorio que sonó */
+export async function snoozeReminder(id: number, title: string, notes?: string) {
+  const t = Date.now() + 10 * 60000;
+  if (AgendaAlarm) {
+    AgendaAlarm.schedule(`r${id}_pospuesta_${t}`, t, `🔔 ${title}`, notes || 'Recordatorio pospuesto', id);
+    return;
+  }
+  await Notifications.scheduleNotificationAsync({
+    content: content(`🔔 ${title}`, notes || 'Recordatorio pospuesto', { reminderId: id }),
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 600, channelId: CHANNEL_ID },
+  });
 }

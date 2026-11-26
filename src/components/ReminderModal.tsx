@@ -4,7 +4,7 @@ import { useApp } from '../AppState';
 import { first, run } from '../db';
 import { hm, longDate, parseYmd, ymd } from '../dates';
 import {
-  ADVANCE_OPTIONS, cancelReminder, Reminder, REPEAT_LABEL, Repeat, scheduleReminder,
+  ADVANCE_OPTIONS, cancelReminder, Reminder, REPEAT_LABEL, Repeat, scheduleReminder, snoozeReminder,
 } from '../notifications';
 import { C, TAB_COLORS } from '../theme';
 import { pickDate, pickTime } from './pickers';
@@ -61,6 +61,18 @@ export function ReminderModal() {
     closeReminder();
   };
 
+  const markDone = async () => {
+    const id = reminderDraft.id!;
+    run('UPDATE reminders SET done=1 WHERE id=?', [id]);
+    const r = first<Reminder>('SELECT * FROM reminders WHERE id=?', [id]);
+    if (r) await scheduleReminder(r);
+    closeReminder();
+  };
+  const snooze = async () => {
+    await snoozeReminder(reminderDraft.id!, reminderDraft.title ?? 'Recordatorio', reminderDraft.notes);
+    closeReminder();
+  };
+
   const remove = () =>
     Alert.alert('Eliminar recordatorio', '¿Seguro?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -81,6 +93,19 @@ export function ReminderModal() {
       <View style={st.backdrop}>
         <Sheet style={st.sheet}>
           <ScrollView keyboardShouldPersistTaps="handled">
+            {reminderDraft.ringing && (
+              <View style={st.ringing}>
+                <Text style={st.ringingTitle}>🔔 {reminderDraft.title}</Text>
+                <Text style={st.ringingText}>
+                  Este es el recordatorio que acaba de sonar{reminderDraft.notes ? `: ${reminderDraft.notes}` : '.'}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  {reminderDraft.repeat === 'none' && <Btn label="✔ Listo, ya lo hice" color={C.ok} onPress={markDone} />}
+                  <Btn label="⏰ Recordame en 10 min" outline onPress={snooze} />
+                  <Btn label="Cerrar" outline color={C.inkSoft} onPress={closeReminder} />
+                </View>
+              </View>
+            )}
             <Title>{editing ? '🔔 Editar recordatorio' : '🔔 Nuevo recordatorio'}</Title>
             <Field label="¿Qué hay que recordar?" value={title} onChangeText={setTitle} placeholder="Ej: Turno con el médico" autoFocus={!editing} />
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -135,6 +160,9 @@ const st = StyleSheet.create({
   label: { fontSize: 12, color: C.inkSoft, marginBottom: 4, fontWeight: '600' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  ringing: { backgroundColor: '#FFF3CD', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 2, borderColor: '#F0C36D' },
+  ringingTitle: { fontSize: 20, fontWeight: '900', color: C.ink },
+  ringingText: { color: C.inkSoft, marginTop: 2 },
   swatch: { width: 30, height: 30, borderRadius: 15, marginRight: 8, marginBottom: 6, borderWidth: 1, borderColor: '#0002' },
   swatchActive: { borderWidth: 3, borderColor: C.ink },
 });

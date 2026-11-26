@@ -6,7 +6,7 @@ export type Section =
   | 'dia' | 'semana' | 'mes' | 'anio' | 'recordatorios' | 'contactos'
   | 'listas' | 'habitos' | 'metas' | 'cuadernos' | 'gastos' | 'ajustes';
 
-export type ReminderDraft = Partial<Reminder> & { date: string };
+export type ReminderDraft = Partial<Reminder> & { date: string; ringing?: boolean };
 
 type Ctx = {
   section: Section;

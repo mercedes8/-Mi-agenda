@@ -9,7 +9,9 @@ import { QuickNoteModal } from './src/components/QuickNote';
 import { ReminderModal } from './src/components/ReminderModal';
 import { first } from './src/db';
 import { parseYmd } from './src/dates';
-import { listenResponses, setupNotifications } from './src/notifications';
+import * as Notifications from 'expo-notifications';
+import { AgendaAlarm } from './modules/agenda-alarm';
+import { BIRTHDAY_BASE, dailyRefresh, listenResponses, Reminder, setupNotifications } from './src/notifications';
 import { ContactsScreen } from './src/screens/ContactsScreen';
 import { DayScreen } from './src/screens/DayScreen';
 import { ExpensesScreen } from './src/screens/ExpensesScreen';
@@ -58,20 +60,51 @@ function Screen() {
 }
 
 function Shell() {
-  const { section, setSection, goToDay } = useApp();
+  const { section, setSection, goToDay, openReminder, setCoverVisible } = useApp();
   const [quick, setQuick] = useState(false);
 
   useEffect(() => {
-    setupNotifications().catch(console.warn);
-    return listenResponses((data) => {
-      if (typeof data.reminderId === 'number') {
-        const r = first<{ date: string; repeat: string }>('SELECT date, repeat FROM reminders WHERE id=?', [data.reminderId]);
-        if (r) goToDay(r.repeat === 'none' ? parseYmd(r.date) : new Date());
-        else setSection('recordatorios');
-      } else if (typeof data.contactId === 'number') {
+    /** Abre directamente el recordatorio que sonó */
+    const openFromAlarm = (rid: number) => {
+      try {
+        AgendaAlarm?.stopRinging();
+      } catch {}
+      setCoverVisible(false);
+      if (rid >= 0) {
+        const r = first<Reminder>('SELECT * FROM reminders WHERE id=?', [rid]);
+        if (r) {
+          goToDay(r.repeat === 'none' ? parseYmd(r.date) : new Date());
+          openReminder({ ...r, ringing: true });
+        } else setSection('recordatorios');
+      } else if (rid <= BIRTHDAY_BASE) {
         setSection('contactos');
       }
+    };
+
+    setupNotifications()
+      .then(() => dailyRefresh())
+      .catch(console.warn);
+
+    // ¿La app se abrió tocando una alarma?
+    const launch = AgendaAlarm?.getLaunchReminder() ?? -1;
+    if (launch !== -1) openFromAlarm(launch);
+    const sub = AgendaAlarm?.addListener('onOpenReminder', (e) => openFromAlarm(e.reminderId));
+
+    // Respaldo: avisos programados con expo-notifications
+    Notifications.getLastNotificationResponseAsync()
+      .then((resp) => {
+        const id = resp?.notification.request.content.data?.reminderId;
+        if (typeof id === 'number') openFromAlarm(id);
+      })
+      .catch(() => {});
+    const off = listenResponses((data) => {
+      if (typeof data.reminderId === 'number') openFromAlarm(data.reminderId);
+      else if (typeof data.contactId === 'number') setSection('contactos');
     });
+    return () => {
+      off();
+      sub?.remove();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
